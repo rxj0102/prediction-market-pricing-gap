@@ -4,7 +4,7 @@ Data collection for a study of the gap between Kalshi prediction market prices a
 
 ## Status
 
-Collection, backfill and a first alignment of the rates data. No findings yet. The numbers below describe data coverage, not a result.
+Collection, backfill, a first alignment of the rates data, and a first calibration table for the S&P 500 ladder. The calibration table is a descriptive baseline from one pass over the data, not a tested finding.
 
 ## What the collector does
 
@@ -43,6 +43,35 @@ On the clean rows the gap in means is a few basis points in either direction. Th
 
 The tracker file is licensed for personal and educational use only. The script downloads it to `data/external/`, which is not committed, and the panel that contains tracker values is not committed either. Run the script to rebuild both.
 
+## S&P 500 ladder backfill and calibration
+
+`backfill_inxu.py` has two stages. The `markets` stage lists every market in the Kalshi S&P 500 above/below series (KXINXU). The `candles` stage pulls hourly candles for the ladders that close at 16:00 Eastern, for strikes that traded at least once. Both stages can be stopped and resumed.
+
+From the run that finished on 2026-11-15:
+
+- 852,285 markets across 3,511 events in the series.
+- 852 ladders that close at 16:00 Eastern, from August 2022 to November 2026.
+- 14,543 traded strikes in those ladders and 297,477 hourly candles.
+
+`calibrate_inxu.py` takes the bid and ask midpoint 6, 4, 2 and 1 hours before the close, keeps quotes with a spread of at most 10 cents, and compares price with how often the contract settled yes. Standard errors are clustered by event day. The full table is in `data/derived/inxu_calibration.csv`.
+
+What the table shows, 6 hours before the close (44,966 usable quotes over 849 event days across all four snapshots):
+
+| Price bucket | Quotes | Mean price | Settled yes | Yes minus price | Std error |
+|---|---|---|---|---|---|
+| 0.05 to 0.15 | 780 | 0.092 | 0.053 | -0.039 | 0.011 |
+| 0.15 to 0.25 | 473 | 0.198 | 0.146 | -0.053 | 0.019 |
+| 0.45 to 0.55 | 334 | 0.503 | 0.464 | -0.038 | 0.032 |
+| 0.75 to 0.85 | 620 | 0.805 | 0.782 | -0.023 | 0.023 |
+| 0.85 to 0.95 | 1441 | 0.914 | 0.926 | 0.013 | 0.012 |
+
+Cheap contracts settled yes less often than their price, which is the favourite longshot pattern. Read it with these limits in mind:
+
+- Only strikes that traded were backfilled, so untraded far strikes are missing.
+- The table has 44 buckets across four snapshots and no correction for multiple tests.
+- In the cheapest bucket a midpoint cannot fall below half a cent, so part of that gap is mechanical.
+- The gap is negative through most of the middle of the range too, not only at the cheap end. That may be a general tilt toward yes or it may be noise. It has not been tested.
+
 ## Schedule
 
 `.github/workflows/collect.yml` runs the collector hourly on weekdays from 14:35 to 21:35 UTC and commits new files. The script skips any day on which the index has not traded.
@@ -55,6 +84,9 @@ python collector.py           # skips when the market has not traded today
 python collector.py --force   # snapshot regardless, for testing
 python backfill_fed.py         # rebuild data/kalshi_fed, takes about 30 minutes
 python build_rates_panel.py    # rebuild data/derived from the backfill
+python backfill_inxu.py markets    # list the S&P 500 ladder series
+python backfill_inxu.py candles    # hourly candles for closing ladders
+python calibrate_inxu.py           # calibration table
 ```
 
 ## Data sources
