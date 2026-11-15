@@ -26,7 +26,7 @@ DAY = 1440  # candle length in minutes
 MAX_CANDLES = 4000  # API limit is 5000 per request
 UA = {"User-Agent": "Mozilla/5.0 (research data collector)"}
 
-MARKET_FIELDS = ["ticker", "event_ticker", "status", "strike_type", "floor_strike",
+MARKET_FIELDS = ["ticker", "event_ticker", "status", "strike", "strike_type", "floor_strike",
                  "cap_strike", "open_time", "close_time", "result",
                  "expiration_value", "volume_fp", "source"]
 CANDLE_FIELDS = ["ticker", "end_period_utc", "yes_bid_close", "yes_ask_close",
@@ -70,6 +70,16 @@ def event_markets(event_ticker):
         if rows:
             return source, rows
     return None, []
+
+
+def strike_from_ticker(ticker):
+    """FED-22DEC-T1.25 -> 1.25. Older markets have no strike fields in the
+    API response, so the ticker is the only complete source."""
+    tail = ticker.rsplit("-T", 1)
+    try:
+        return float(tail[1]) if len(tail) == 2 else None
+    except ValueError:
+        return None
 
 
 def ts(iso):
@@ -136,6 +146,7 @@ def main():
         n = 0
         for m in markets:
             m["source"] = source
+            m["strike"] = strike_from_ticker(m["ticker"])
             rows = candles(m, source)
             n += len(rows)
             all_candles += rows
