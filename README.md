@@ -70,7 +70,18 @@ Cheap contracts settled yes less often than their price, which is the favourite 
 - Only strikes that traded were backfilled, so untraded far strikes are missing.
 - The table has 44 buckets across four snapshots and no correction for multiple tests.
 - In the cheapest bucket a midpoint cannot fall below half a cent, so part of that gap is mechanical.
-- The gap is negative through most of the middle of the range too, not only at the cheap end. That may be a general tilt toward yes or it may be noise. It has not been tested.
+- The gap is negative through most of the middle of the range too, not only at the cheap end. The next section tests this.
+
+## Yes tilt check
+
+`test_yes_tilt.py` follows up on the negative gap in the middle of the price range. It writes `data/derived/inxu_yes_tilt.csv`.
+
+- Pooled over prices from 0.15 to 0.85, the gap between settlement and midpoint six hours out is -0.028 with a standard error of 0.018 (757 event days). It is negative in both halves of the range and not clearly different from zero in either.
+- Against the bid the same gap is -0.011 (standard error 0.018). Against the ask it is -0.045.
+- On 306 days where the index level at the snapshot is known from an hourly ladder, the implied median sits 4.8 basis points above the index six hours out (standard error 0.2), while the implied mean on 280 of those days sits 4.2 basis points below it (standard error 0.5). The median is 9.1 basis points above the mean.
+- The realized move from snapshot to close on those days averaged -0.8 basis points with a standard error of 4.4.
+
+A median above the mean is what a left skewed distribution looks like. So the negative gap in the middle of the range is consistent with left skew in the quotes and does not need a general tilt toward yes. The settlement data is too noisy to say whether that skew is larger than the skew in outcomes. The implied mean ignores probability outside the quoted strikes and uses traded strikes with tight spreads only.
 
 ## Schedule
 
@@ -87,6 +98,7 @@ python build_rates_panel.py    # rebuild data/derived from the backfill
 python backfill_inxu.py markets    # list the S&P 500 ladder series
 python backfill_inxu.py candles    # hourly candles for closing ladders
 python calibrate_inxu.py           # calibration table
+python test_yes_tilt.py            # yes tilt and skew check
 ```
 
 ## Data sources
