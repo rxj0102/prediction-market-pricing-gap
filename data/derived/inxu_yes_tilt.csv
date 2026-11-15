@@ -1,0 +1,121 @@
+test,sample,hours_to_close,unit,n,days,mean,std_error,t_stat
+"gap vs midpoint, 0.15 to 0.85",all years,6,probability,3004,757,-0.0279,0.0178,-1.5741
+"gap vs midpoint, 0.15 to 0.50",all years,6,probability,1359,691,-0.0314,0.0193,-1.6266
+"gap vs midpoint, 0.50 to 0.85",all years,6,probability,1645,719,-0.0251,0.0212,-1.1829
+"gap vs bid, 0.15 to 0.85",all years,6,probability,3004,757,-0.0112,0.0177,-0.6317
+"gap vs ask, 0.15 to 0.85",all years,6,probability,3004,757,-0.0447,0.0178,-2.513
+"gap vs midpoint, 0.15 to 0.85",all years,4,probability,2544,826,-0.0287,0.018,-1.5969
+"gap vs midpoint, 0.15 to 0.50",all years,4,probability,1173,675,-0.0376,0.0196,-1.92
+"gap vs midpoint, 0.50 to 0.85",all years,4,probability,1371,733,-0.0211,0.0215,-0.9809
+"gap vs bid, 0.15 to 0.85",all years,4,probability,2544,826,-0.0127,0.018,-0.7051
+"gap vs ask, 0.15 to 0.85",all years,4,probability,2544,826,-0.0448,0.018,-2.4909
+"gap vs midpoint, 0.15 to 0.85",all years,2,probability,1722,762,-0.0407,0.0174,-2.3463
+"gap vs midpoint, 0.15 to 0.50",all years,2,probability,823,558,-0.0554,0.0183,-3.0261
+"gap vs midpoint, 0.50 to 0.85",all years,2,probability,899,580,-0.0273,0.0223,-1.2285
+"gap vs bid, 0.15 to 0.85",all years,2,probability,1722,762,-0.0243,0.0174,-1.3989
+"gap vs ask, 0.15 to 0.85",all years,2,probability,1722,762,-0.0572,0.0174,-3.2936
+"gap vs midpoint, 0.15 to 0.85",all years,1,probability,1350,717,-0.0409,0.019,-2.1481
+"gap vs midpoint, 0.15 to 0.50",all years,1,probability,680,490,-0.0382,0.0214,-1.7828
+"gap vs midpoint, 0.50 to 0.85",all years,1,probability,670,489,-0.0436,0.0237,-1.8365
+"gap vs bid, 0.15 to 0.85",all years,1,probability,1350,717,-0.0241,0.019,-1.2681
+"gap vs ask, 0.15 to 0.85",all years,1,probability,1350,717,-0.0576,0.019,-3.0264
+close minus implied median,all years,6,bps,530,530,-5.431,3.1848,-1.7053
+"share of days closing above implied median, minus one half",all years,6,share,530,530,-0.0132,0.0217,-0.6083
+implied drift: median minus spot at snapshot,days with spot,6,bps,306,306,4.8378,0.2225,21.741
+implied drift: mean minus spot at snapshot,days with spot,6,bps,280,280,-4.2307,0.4998,-8.4643
+implied median minus implied mean,days with spot,6,bps,280,280,9.0779,0.5008,18.1269
+realized drift: close minus spot at snapshot,days with spot,6,bps,306,306,-0.8001,4.4446,-0.18
+close minus implied median,days with spot,6,bps,306,306,-5.6375,4.4165,-1.2765
+close minus implied median,all years,4,bps,404,404,-4.6041,3.7191,-1.2379
+"share of days closing above implied median, minus one half",all years,4,share,404,404,-0.0173,0.0249,-0.6969
+implied drift: median minus spot at snapshot,days with spot,4,bps,288,288,3.5087,0.1854,18.9244
+implied drift: mean minus spot at snapshot,days with spot,4,bps,273,273,-2.2578,0.3772,-5.9856
+implied median minus implied mean,days with spot,4,bps,273,273,5.8095,0.4325,13.4336
+realized drift: close minus spot at snapshot,days with spot,4,bps,288,288,0.8981,4.7067,0.1908
+close minus implied median,days with spot,4,bps,288,288,-2.6116,4.6839,-0.5576
+close minus implied median,all years,2,bps,244,244,-5.9693,2.8453,-2.0979
+"share of days closing above implied median, minus one half",all years,2,share,244,244,-0.0492,0.0319,-1.5439
+implied drift: median minus spot at snapshot,days with spot,2,bps,184,184,1.4074,0.1389,10.1295
+implied drift: mean minus spot at snapshot,days with spot,2,bps,173,173,-1.7137,0.4294,-3.9908
+implied median minus implied mean,days with spot,2,bps,173,173,3.0564,0.4475,6.8292
+realized drift: close minus spot at snapshot,days with spot,2,bps,184,184,-3.7396,3.1462,-1.1886
+close minus implied median,days with spot,2,bps,184,184,-5.1465,3.1374,-1.6403
+close minus implied median,all years,1,bps,170,170,-5.405,3.1557,-1.7128
+"share of days closing above implied median, minus one half",all years,1,share,170,170,-0.0471,0.0382,-1.2326
+implied drift: median minus spot at snapshot,days with spot,1,bps,142,142,0.7976,0.1327,6.0128
+implied drift: mean minus spot at snapshot,days with spot,1,bps,142,142,-0.5904,0.2661,-2.2183
+implied median minus implied mean,days with spot,1,bps,142,142,1.388,0.3167,4.3827
+realized drift: close minus spot at snapshot,days with spot,1,bps,142,142,-2.4011,3.4677,-0.6924
+close minus implied median,days with spot,1,bps,142,142,-3.1998,3.436,-0.9313
+"gap vs midpoint, 0.15 to 0.85",2023,6,probability,259,129,-0.0305,0.0354,-0.8623
+"gap vs midpoint, 0.15 to 0.50",2023,6,probability,130,118,-0.0085,0.0385,-0.2199
+"gap vs midpoint, 0.50 to 0.85",2023,6,probability,129,116,-0.0528,0.0465,-1.1354
+"gap vs midpoint, 0.15 to 0.85",2023,4,probability,188,129,-0.0274,0.0355,-0.7727
+"gap vs midpoint, 0.15 to 0.50",2023,4,probability,91,87,-0.0725,0.044,-1.6459
+"gap vs midpoint, 0.50 to 0.85",2023,4,probability,97,94,0.0148,0.0465,0.318
+"gap vs midpoint, 0.15 to 0.85",2023,2,probability,133,107,-0.0208,0.0382,-0.5459
+"gap vs midpoint, 0.15 to 0.50",2023,2,probability,67,67,-0.0699,0.0461,-1.5165
+"gap vs midpoint, 0.50 to 0.85",2023,2,probability,66,65,0.029,0.0571,0.5084
+"gap vs midpoint, 0.15 to 0.85",2023,1,probability,103,98,-0.0796,0.0392,-2.0292
+"gap vs midpoint, 0.15 to 0.50",2023,1,probability,51,51,-0.1786,0.0453,-3.9404
+"gap vs midpoint, 0.50 to 0.85",2023,1,probability,52,52,0.0176,0.0595,0.296
+close minus implied median,2023,6,bps,61,61,-2.0074,8.8895,-0.2258
+"share of days closing above implied median, minus one half",2023,6,share,61,61,0.0246,0.0639,0.3846
+"gap vs midpoint, 0.15 to 0.85",2024,6,probability,648,238,-0.0065,0.0264,-0.2444
+"gap vs midpoint, 0.15 to 0.50",2024,6,probability,287,214,0.0098,0.0314,0.3113
+"gap vs midpoint, 0.50 to 0.85",2024,6,probability,361,225,-0.0194,0.0314,-0.6168
+"gap vs midpoint, 0.15 to 0.85",2024,4,probability,539,248,-0.0018,0.0254,-0.0712
+"gap vs midpoint, 0.15 to 0.50",2024,4,probability,234,190,-0.0173,0.0333,-0.5197
+"gap vs midpoint, 0.50 to 0.85",2024,4,probability,305,217,0.0101,0.03,0.336
+"gap vs midpoint, 0.15 to 0.85",2024,2,probability,382,234,-0.014,0.0261,-0.5373
+"gap vs midpoint, 0.15 to 0.50",2024,2,probability,181,152,-0.0312,0.035,-0.8909
+"gap vs midpoint, 0.50 to 0.85",2024,2,probability,201,172,0.0015,0.0328,0.0448
+"gap vs midpoint, 0.15 to 0.85",2024,1,probability,290,216,-0.041,0.0297,-1.3796
+"gap vs midpoint, 0.15 to 0.50",2024,1,probability,153,140,-0.0331,0.0366,-0.9043
+"gap vs midpoint, 0.50 to 0.85",2024,1,probability,137,129,-0.0498,0.0422,-1.1811
+close minus implied median,2024,6,bps,160,160,-5.6848,5.2857,-1.0755
+"share of days closing above implied median, minus one half",2024,6,share,160,160,0.0062,0.0395,0.1581
+close minus implied median,2024,4,bps,90,90,-7.8284,6.4372,-1.2161
+"share of days closing above implied median, minus one half",2024,4,share,90,90,0.0222,0.0527,0.4221
+close minus implied median,2024,2,bps,52,52,-10.2762,5.4501,-1.8855
+"share of days closing above implied median, minus one half",2024,2,share,52,52,-0.0769,0.0685,-1.1228
+"gap vs midpoint, 0.15 to 0.85",2025,6,probability,567,184,-0.0,0.0282,-0.0016
+"gap vs midpoint, 0.15 to 0.50",2025,6,probability,254,167,-0.0281,0.0348,-0.8065
+"gap vs midpoint, 0.50 to 0.85",2025,6,probability,313,178,0.0227,0.0308,0.7376
+"gap vs midpoint, 0.15 to 0.85",2025,4,probability,572,233,0.0217,0.0269,0.8059
+"gap vs midpoint, 0.15 to 0.50",2025,4,probability,273,197,0.0095,0.0326,0.2927
+"gap vs midpoint, 0.50 to 0.85",2025,4,probability,299,210,0.0328,0.0307,1.0657
+"gap vs midpoint, 0.15 to 0.85",2025,2,probability,385,211,-0.0151,0.028,-0.5383
+"gap vs midpoint, 0.15 to 0.50",2025,2,probability,191,157,-0.0446,0.0337,-1.3215
+"gap vs midpoint, 0.50 to 0.85",2025,2,probability,194,156,0.0139,0.0354,0.3943
+"gap vs midpoint, 0.15 to 0.85",2025,1,probability,303,202,-0.0153,0.0311,-0.4927
+"gap vs midpoint, 0.15 to 0.50",2025,1,probability,153,139,0.009,0.0387,0.2312
+"gap vs midpoint, 0.50 to 0.85",2025,1,probability,150,134,-0.0401,0.0393,-1.0189
+close minus implied median,2025,6,bps,124,124,-3.3732,8.9757,-0.3758
+"share of days closing above implied median, minus one half",2025,6,share,124,124,-0.0242,0.0448,-0.5394
+close minus implied median,2025,4,bps,113,113,1.6209,10.8247,0.1497
+"share of days closing above implied median, minus one half",2025,4,share,113,113,-0.0133,0.047,-0.2823
+close minus implied median,2025,2,bps,58,58,-5.9183,8.4701,-0.6987
+"share of days closing above implied median, minus one half",2025,2,share,58,58,0.0172,0.0656,0.2628
+close minus implied median,2025,1,bps,35,35,2.8179,11.8311,0.2382
+"share of days closing above implied median, minus one half",2025,1,share,35,35,0.0429,0.0842,0.509
+"gap vs midpoint, 0.15 to 0.85",2026,6,probability,1527,203,-0.0465,0.0305,-1.522
+"gap vs midpoint, 0.15 to 0.50",2026,6,probability,687,191,-0.0537,0.0323,-1.6631
+"gap vs midpoint, 0.50 to 0.85",2026,6,probability,840,198,-0.0405,0.0367,-1.1042
+"gap vs midpoint, 0.15 to 0.85",2026,4,probability,1244,215,-0.0632,0.0319,-1.9826
+"gap vs midpoint, 0.15 to 0.50",2026,4,probability,575,201,-0.0628,0.0333,-1.8865
+"gap vs midpoint, 0.50 to 0.85",2026,4,probability,669,211,-0.0636,0.0383,-1.6576
+"gap vs midpoint, 0.15 to 0.85",2026,2,probability,820,208,-0.0674,0.0307,-2.1917
+"gap vs midpoint, 0.15 to 0.50",2026,2,probability,383,181,-0.0693,0.0303,-2.2909
+"gap vs midpoint, 0.50 to 0.85",2026,2,probability,437,186,-0.0656,0.0386,-1.7018
+"gap vs midpoint, 0.15 to 0.85",2026,1,probability,654,201,-0.0465,0.0334,-1.3927
+"gap vs midpoint, 0.15 to 0.50",2026,1,probability,323,160,-0.0407,0.0364,-1.1185
+"gap vs midpoint, 0.50 to 0.85",2026,1,probability,331,174,-0.0523,0.0399,-1.3086
+close minus implied median,2026,6,bps,185,185,-7.7197,4.1834,-1.8453
+"share of days closing above implied median, minus one half",2026,6,share,185,185,-0.0351,0.0367,-0.9581
+close minus implied median,2026,4,bps,179,179,-6.8172,3.3355,-2.0438
+"share of days closing above implied median, minus one half",2026,4,share,179,179,-0.0475,0.0372,-1.2764
+close minus implied median,2026,2,bps,129,129,-5.4402,2.7249,-1.9965
+"share of days closing above implied median, minus one half",2026,2,share,129,129,-0.0814,0.0434,-1.8739
+close minus implied median,2026,1,bps,109,109,-5.3973,2.384,-2.2639
+"share of days closing above implied median, minus one half",2026,1,share,109,109,-0.0596,0.0475,-1.2541

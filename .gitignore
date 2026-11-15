@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+# Third party files that are not redistributed (see README)
+data/external/
+data/derived/rates_panel.csv
