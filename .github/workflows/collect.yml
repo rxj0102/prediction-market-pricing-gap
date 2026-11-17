@@ -2,10 +2,15 @@ name: collect
 
 on:
   schedule:
-    # Hourly on weekdays, 14:35 to 21:35 UTC. This covers the US cash session
-    # in both winter and summer time. The script skips runs when the market
-    # has not traded today.
+    # Intraday snapshots, hourly on weekdays from 14:35 to 21:35 UTC. This
+    # covers the US cash session in both winter and summer time.
     - cron: "35 14-21 * * 1-5"
+    # Closing snapshots. GitHub often runs scheduled jobs hours late or skips
+    # them, so these try every hour from the evening until before the next
+    # open. The script saves the closing chain once per session and exits
+    # early on every later run.
+    - cron: "7 22,23 * * 1-5"
+    - cron: "7 0-13 * * 2-6"
   workflow_dispatch:
 
 permissions:
@@ -23,12 +28,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r requirements.txt
+      - run: pip install requests
       - run: python collector.py
       - name: Commit new data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data
-          git diff --cached --quiet || git commit -m "Add snapshot $(date -u +%Y-%m-%dT%H:%MZ)"
-          git push
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Add snapshot $(date -u +%Y-%m-%dT%H:%MZ)"
+          for attempt in 1 2 3; do
+            git pull --rebase --quiet origin main && git push && exit 0
+            sleep 10
+          done
+          exit 1

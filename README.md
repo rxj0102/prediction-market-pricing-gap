@@ -8,11 +8,15 @@ Collection, backfill, a first alignment of the rates data, and a first calibrati
 
 ## What the collector does
 
-`collector.py` takes one snapshot per run and writes it under `data/YYYY-MM-DD/`:
+`collector.py` takes one snapshot per run and writes it under `data/YYYY-MM-DD/`, named by the trading session it belongs to:
 
 - `*_spx_options.csv.gz`: SPX option quotes from the free Cboe delayed feed (about 15 minutes delayed), limited to expiries in the next 7 days plus the December year end expiries.
 - `*_kalshi.csv.gz`: every open Kalshi market in the S&P 500 above/below ladder (KXINXU) and the yearly range (KXINXY), with bid, ask, volume and open interest.
-- `data/manifest.csv`: one row per snapshot with fetch times and the SPX level.
+- `data/manifest.csv`: one row per snapshot with fetch times, the SPX level and the kind of snapshot.
+
+There are two kinds. An intraday snapshot is taken while the index is still ticking. A closing snapshot is taken after the session ends, when the option chain holds its closing quotes until the next open, so a run any time overnight captures the same closing chain. Only one closing snapshot is kept per session.
+
+The closing chain lines up with the next session's 16:00 above/below ladder. In the backfill, 97.3 percent of those ladders were already open by 16:15 Eastern on the previous trading day, when the option chain stops updating.
 
 The option chain is the part that cannot be backfilled for free, which is why the job runs on a schedule. Kalshi prices can be pulled again later at one minute resolution from the public candlestick endpoints.
 
@@ -85,14 +89,16 @@ A median above the mean is what a left skewed distribution looks like. So the ne
 
 ## Schedule
 
-`.github/workflows/collect.yml` runs the collector hourly on weekdays from 14:35 to 21:35 UTC and commits new files. The script skips any day on which the index has not traded.
+`.github/workflows/collect.yml` runs the collector hourly on weekdays from 14:35 to 21:35 UTC for intraday snapshots, and hourly from 22:07 UTC until 13:07 UTC the next morning for the closing snapshot. It commits new files.
+
+GitHub runs scheduled jobs late or skips them. Of the first eleven scheduled slots, from 14:35 UTC on 2026-11-16 to 16:35 UTC on 2026-11-17, one run started, at 23:28 UTC on 2026-11-16, almost two hours after the last slot of that day. The overnight slots exist so that any single run that does start is enough to save the closing chain.
 
 ## Run locally
 
 ```
 pip install -r requirements.txt
-python collector.py           # skips when the market has not traded today
-python collector.py --force   # snapshot regardless, for testing
+python collector.py           # intraday snapshot, or the closing one if not yet saved
+python collector.py --force   # snapshot even if the closing chain is already saved
 python backfill_fed.py         # rebuild data/kalshi_fed, takes about 30 minutes
 python build_rates_panel.py    # rebuild data/derived from the backfill
 python backfill_inxu.py markets    # list the S&P 500 ladder series
@@ -113,4 +119,5 @@ All are free and need no API key.
 ## Known limits
 
 - Option quotes are delayed and Kalshi quotes are live, so the two files in a snapshot are not from the same instant. Align them in analysis using Kalshi candlesticks at the option timestamp.
-- Scheduled GitHub Actions runs can start late.
+- Scheduled GitHub Actions runs can start late or not at all, so intraday coverage will be patchy.
+- A run in the first half hour after the close is labelled intraday, although its quotes are already final. A later run still saves a separate closing snapshot.
