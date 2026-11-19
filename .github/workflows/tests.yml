@@ -1,0 +1,21 @@
+name: tests
+
+# Code changes only. The collector commits data every hour and those commits
+# do not need a test run.
+on:
+  push:
+    paths: ["**.py", "requirements.txt", "pytest.ini", ".github/workflows/tests.yml"]
+  pull_request:
+    paths: ["**.py", "requirements.txt", "pytest.ini", ".github/workflows/tests.yml"]
+  workflow_dispatch:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt pytest
+      - run: python -m pytest -q

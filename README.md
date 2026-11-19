@@ -78,7 +78,7 @@ Cheap contracts settled yes less often than their price, which is the favourite 
 
 ## Yes tilt check
 
-`test_yes_tilt.py` follows up on the negative gap in the middle of the price range. It writes `data/derived/inxu_yes_tilt.csv`.
+`yes_tilt.py` follows up on the negative gap in the middle of the price range. It writes `data/derived/inxu_yes_tilt.csv`.
 
 - Pooled over prices from 0.15 to 0.85, the gap between settlement and midpoint six hours out is -0.028 with a standard error of 0.018 (757 event days). It is negative in both halves of the range and not clearly different from zero in either.
 - Against the bid the same gap is -0.011 (standard error 0.018). Against the ask it is -0.045.
@@ -122,10 +122,13 @@ python build_rates_panel.py    # rebuild data/derived from the backfill
 python backfill_inxu.py markets    # list the S&P 500 ladder series
 python backfill_inxu.py candles    # hourly candles for closing ladders
 python calibrate_inxu.py           # calibration table
-python test_yes_tilt.py            # yes tilt and skew check
+python yes_tilt.py                 # yes tilt and skew check
 python ladder_spreads.py           # ladder spreads by hours before settlement
 python match_close.py              # match closing chains with the next day ladder
+python -m pytest -q                # tests, no network needed
 ```
+
+The tests check the collector's save logic (symbol parsing, expiry window, intraday versus closing classification across daylight saving time, one closing snapshot per session) and the pricing path on synthetic chains with known answers: the forward from put call parity, implied volatility, and option probabilities against the Black digital with flat and skewed smiles.
 
 ## Data sources
 
