@@ -4,7 +4,7 @@ Data collection for a study of the gap between Kalshi prediction market prices a
 
 ## Status
 
-Collection, backfill, a first alignment of the rates data, and a first calibration table for the S&P 500 ladder. The calibration table is a descriptive baseline from one pass over the data, not a tested finding.
+Collection, backfill, a first alignment of the rates data, a first calibration table for the S&P 500 ladder, and matching of closing option chains with the next day ladder. The calibration table is a descriptive baseline from one pass over the data, and the matching covers three sessions. Neither is a tested finding.
 
 ## What the collector does
 
@@ -87,6 +87,24 @@ Cheap contracts settled yes less often than their price, which is the favourite 
 
 A median above the mean is what a left skewed distribution looks like. So the negative gap in the middle of the range is consistent with left skew in the quotes and does not need a general tilt toward yes. The settlement data is too noisy to say whether that skew is larger than the skew in outcomes. The implied mean ignores probability outside the quoted strikes and uses traded strikes with tight spreads only.
 
+## Matching closing chains with the next day ladder
+
+`match_close.py` pairs each closing snapshot (session D) with the Kalshi ladder that settles at 16:00 on the next session.
+
+- Options: the SPXW chain expiring on that next session, which settles on the same close as the ladder. The forward comes from put call parity near the money. Out of the money midpoints are turned into implied volatilities, a smoothing spline is fitted to the smile with each strike weighted by how precisely its quote pins down the volatility, and the probability of closing at or above a strike is minus the slope of the fitted call price curve.
+- Kalshi: one minute candles for each strike, keeping the bid and ask from the last candle ending at or before 16:15 Eastern on D, when the option chain stops updating. The evening quotes in the snapshot itself are not used. `ladder_spreads.py` shows why: in the hourly backfill for 2026, the hour ending 17:00 Eastern on the day before settlement has a median near the money spread of 5 cents, against 31 cents in the hour ending 18:00.
+- Settlement results are added where the next session has passed.
+
+Output from the run on 2026-11-19, for strikes with an option probability from 0.05 to 0.95 and a Kalshi spread of at most 10 cents:
+
+| Session | Strikes | Mean spread | Mean gap | Largest gap | Option inside quote |
+|---|---|---|---|---|---|
+| 2026-11-16 | 30 | 0.041 | -0.0099 | 0.0184 | 0.80 |
+| 2026-11-17 | 52 | 0.047 | 0.0022 | 0.0099 | 1.00 |
+| 2026-11-18 | 60 | 0.049 | -0.0025 | 0.0121 | 1.00 |
+
+The gap is the Kalshi midpoint minus the option probability. At 16:15 the next day ladder sits within about 2 cents of the option implied probability on every near the money strike, inside a quote about 5 cents wide. That pattern is what quotes set off the option market would look like, but three sessions cannot show that, and the option probabilities carry their own fitting error. The full table is in `data/derived/matched_close.csv`.
+
 ## Schedule
 
 `.github/workflows/collect.yml` runs the collector hourly on weekdays from 14:35 to 21:35 UTC for intraday snapshots, and hourly from 22:07 UTC until 13:07 UTC the next morning for the closing snapshot. It commits new files.
@@ -105,6 +123,8 @@ python backfill_inxu.py markets    # list the S&P 500 ladder series
 python backfill_inxu.py candles    # hourly candles for closing ladders
 python calibrate_inxu.py           # calibration table
 python test_yes_tilt.py            # yes tilt and skew check
+python ladder_spreads.py           # ladder spreads by hours before settlement
+python match_close.py              # match closing chains with the next day ladder
 ```
 
 ## Data sources
