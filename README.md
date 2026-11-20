@@ -111,6 +111,24 @@ The gap is the Kalshi midpoint minus the option probability. At 16:15 the next d
 
 GitHub runs scheduled jobs late or skips them. Of the first eleven scheduled slots, from 14:35 UTC on 2026-11-16 to 16:35 UTC on 2026-11-17, one run started, at 23:28 UTC on 2026-11-16, almost two hours after the last slot of that day. The overnight slots exist so that any single run that does start is enough to save the closing chain.
 
+## Mac collector
+
+GitHub has run none of the intraday slots so far, so the `mac/` folder adds a second collector that runs on a Mac during US hours.
+
+- `mac/mac_collect.py` starts every 10 minutes through launchd and usually exits at once. It takes one intraday snapshot per US trading hour from 10:00 to 15:59 Eastern, at the first start from minute 20 of the hour, and the closing snapshot from 16:50 Eastern if GitHub has not saved it yet.
+- It pulls before deciding, so it sees snapshots GitHub has already pushed, and it rebases before pushing, so the two collectors do not collide.
+- The decision uses US Eastern time, so it keeps working when the Mac changes time zone. A Mac that is asleep or offline misses its slots.
+- At six intraday snapshots and one closing snapshot a day, the data grows by roughly 1.2 MB per trading day.
+
+To install, clone the repo on the Mac, stay on `main`, and run:
+
+```
+sh mac/install.sh            # installs and loads the launchd job, then prints a dry run
+sh mac/install.sh uninstall  # removes it
+```
+
+The log is at `~/Library/Logs/pmgap-collect.log`. The Mac needs to be able to push to the repo without a prompt, so check that a plain `git push` works from that clone first.
+
 ## Run locally
 
 ```
@@ -139,5 +157,5 @@ All are free and need no API key.
 ## Known limits
 
 - Option quotes are delayed and Kalshi quotes are live, so the two files in a snapshot are not from the same instant. Align them in analysis using Kalshi candlesticks at the option timestamp.
-- Scheduled GitHub Actions runs can start late or not at all, so intraday coverage will be patchy.
+- Scheduled GitHub Actions runs can start late or not at all, so intraday coverage depends on the Mac collector being awake.
 - A run in the first half hour after the close is labelled intraday, although its quotes are already final. A later run still saves a separate closing snapshot.
