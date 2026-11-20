@@ -16,6 +16,10 @@ if [ "$1" = "uninstall" ]; then
   exit 0
 fi
 
+if [ ! -s "$HOME/.config/pmgap/tradier_token" ]; then
+  echo "note: no Tradier token at ~/.config/pmgap/tradier_token. Save it there with:"
+  echo "  mkdir -p ~/.config/pmgap && pbpaste > ~/.config/pmgap/tradier_token && chmod 600 ~/.config/pmgap/tradier_token"
+fi
 "$PYTHON" -c "import requests" 2>/dev/null || "$PYTHON" -m pip install --user requests
 mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
 cat > "$PLIST" <<PLIST

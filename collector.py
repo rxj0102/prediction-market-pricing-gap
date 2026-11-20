@@ -1,9 +1,11 @@
 """Snapshot the Kalshi S&P 500 ladders and the matching SPX option chain.
 
 Each run writes two gzip CSV files under data/YYYY-MM-DD/ (the session date)
-and adds one row to data/manifest.csv. Both sources are free and need no API key:
-  Kalshi public REST API (markets for the series in KALSHI_SERIES)
-  Cboe delayed quotes (full SPX chain, about 15 minutes delayed)
+and adds one row to data/manifest.csv. All sources are free:
+  Kalshi public REST API (markets for the series in KALSHI_SERIES), no key
+  Tradier market data API (SPX and SPXW chains), free developer account key
+  Cboe delayed quotes, used only when no Tradier key is set. Since 2026-11-19
+  it has answered scripted requests with 403.
 
 The option chain cannot be backfilled for free, so it is the reason this job
 exists. Kalshi prices can be re-pulled later at one minute resolution from the
@@ -26,6 +28,7 @@ import csv
 import datetime as dt
 import gzip
 import io
+import os
 import sys
 import time
 from pathlib import Path
@@ -35,6 +38,8 @@ import requests
 
 KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
 CBOE = "https://cdn.cboe.com/api/global/delayed_quotes/options/_SPX.json"
+TRADIER_BASE = os.environ.get("TRADIER_BASE", "https://sandbox.tradier.com/v1")
+TRADIER_TOKEN_FILE = Path.home() / ".config" / "pmgap" / "tradier_token"
 KALSHI_SERIES = ["KXINXU", "KXINXY"]  # above/below ladder, yearly range
 NEAR_DAYS = 7          # keep option expiries this many calendar days out
 ET = ZoneInfo("America/New_York")
@@ -98,9 +103,129 @@ def write_gz(path, fields, rows):
         f.write(buf.getvalue())
 
 
+# ------------------------------------------------------------- option sources
+#
+# Tradier is used when a token is available (TRADIER_TOKEN, or the file
+# ~/.config/pmgap/tradier_token). Otherwise the Cboe delayed feed is tried.
+# Both return option rows with the same columns, so later scripts do not care
+# which source a snapshot came from. The manifest records it.
+
+def tradier_token():
+    token = os.environ.get("TRADIER_TOKEN", "").strip()
+    if not token and TRADIER_TOKEN_FILE.exists():
+        token = TRADIER_TOKEN_FILE.read_text().strip()
+    return token
+
+
+def as_list(x):
+    if x is None:
+        return []
+    return x if isinstance(x, list) else [x]
+
+
+def et_iso(ms):
+    """Epoch milliseconds to an Eastern time string like 2026-11-17T16:14:59."""
+    if not ms:
+        return ""
+    t = dt.datetime.fromtimestamp(int(ms) / 1000, dt.timezone.utc).astimezone(ET)
+    return t.strftime("%Y-%m-%dT%H:%M:%S")
+
+
+class Tradier:
+    name = "tradier"
+
+    def __init__(self, token):
+        self.headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+
+    def get(self, path, params):
+        for attempt in range(6):
+            r = requests.get(TRADIER_BASE + path, params=params, headers=self.headers, timeout=60)
+            if r.status_code == 429 or r.status_code >= 500:
+                time.sleep(2 * (attempt + 1))
+                continue
+            r.raise_for_status()
+            return r.json()
+        raise RuntimeError(f"gave up on Tradier {path}")
+
+    def tick(self):
+        quote = as_list(self.get("/markets/quotes", {"symbols": "SPX"})["quotes"]["quote"])[0]
+        return et_iso(quote.get("trade_date")), quote.get("last"), ""
+
+    def chain(self, symbol, expiry):
+        page = self.get("/markets/options/chains",
+                        {"symbol": symbol, "expiration": expiry, "greeks": "true"})
+        return as_list((page.get("options") or {}).get("option"))
+
+    def options(self, session):
+        page = self.get("/markets/options/expirations", {"symbol": "SPX", "includeAllRoots": "true"})
+        dates = sorted(dt.date.fromisoformat(d) for d in as_list((page.get("expirations") or {}).get("date")))
+        year_ends = {}
+        for d in dates:
+            if d.month == 12:
+                year_ends[d.year] = max(year_ends.get(d.year, d), d)
+        year_ends = {d for y, d in year_ends.items() if y <= session.year + 1}
+        rows = []
+        for d in dates:
+            if not keep_expiry(d, session, year_ends):
+                continue
+            got = self.chain("SPX", d.isoformat())
+            if not any(o.get("root_symbol") == "SPXW" for o in got):
+                seen = {o["symbol"] for o in got}
+                got += [o for o in self.chain("SPXW", d.isoformat()) if o["symbol"] not in seen]
+            for o in got:
+                greeks = o.get("greeks") or {}
+                root, expiry, cp, strike = parse_occ(o["symbol"])
+                rows.append({
+                    "option": o["symbol"], "root": o.get("root_symbol") or root,
+                    "expiry": expiry.isoformat(), "cp": cp, "strike": strike,
+                    "bid": o.get("bid"), "ask": o.get("ask"),
+                    "bid_size": o.get("bidsize"), "ask_size": o.get("asksize"),
+                    "iv": greeks.get("mid_iv"), "delta": greeks.get("delta"),
+                    "volume": o.get("volume"), "open_interest": o.get("open_interest"),
+                    "last_trade_price": o.get("last"),
+                    "last_trade_time": et_iso(o.get("trade_date")),
+                })
+            time.sleep(0.5)
+        return rows
+
+
+class Cboe:
+    name = "cboe"
+
+    def __init__(self):
+        try:
+            self.payload = get_json(CBOE)
+        except requests.HTTPError as e:
+            if e.response is not None and e.response.status_code == 403:
+                sys.exit("Cboe refused the request (403). Set TRADIER_TOKEN to use Tradier.")
+            raise
+
+    def tick(self):
+        data = self.payload["data"]
+        # last_trade_time is the latest index tick in Eastern time.
+        return (str(data.get("last_trade_time") or ""), data.get("current_price"),
+                self.payload.get("timestamp"))
+
+    def options(self, session):
+        parsed = [(o, *parse_occ(o["option"])) for o in self.payload["data"]["options"]]
+        year_ends = {}
+        for _, _, expiry, _, _ in parsed:
+            if expiry.month == 12:
+                year_ends[expiry.year] = max(year_ends.get(expiry.year, expiry), expiry)
+        year_ends = {d for y, d in year_ends.items() if y <= session.year + 1}
+        return [{**o, "root": root, "expiry": expiry.isoformat(), "cp": cp, "strike": strike}
+                for o, root, expiry, cp, strike in parsed
+                if keep_expiry(expiry, session, year_ends)]
+
+
+def option_source():
+    token = tradier_token()
+    return Tradier(token) if token else Cboe()
+
+
 MANIFEST_FIELDS = ["date_et", "kind", "stamp_utc", "fetch_start_utc", "kalshi_done_utc",
                    "cboe_payload_timestamp", "spx_last_tick_et", "spx_price",
-                   "option_rows", "kalshi_rows", "forced"]
+                   "option_rows", "kalshi_rows", "forced", "source"]
 STALE = dt.timedelta(minutes=30)   # index tick older than this means the session is over
 
 
@@ -139,10 +264,8 @@ def main():
     args = ap.parse_args()
 
     now_utc = dt.datetime.now(dt.timezone.utc)
-    chain = get_json(CBOE)
-    data = chain["data"]
-    # last_trade_time is the latest index tick in Eastern time.
-    last_tick = str(data.get("last_trade_time") or "")
+    source = option_source()
+    last_tick, spx_price, payload_ts = source.tick()
     session, kind = classify(now_utc, last_tick)
 
     manifest = Path(args.out) / "manifest.csv"
@@ -152,19 +275,7 @@ def main():
         print(f"closing chain for {session} already saved (last tick {last_tick}); skipping")
         return 0
 
-    # Last listed expiry of each calendar year, for the yearly range contract.
-    parsed = [(o, *parse_occ(o["option"])) for o in data["options"]]
-    year_ends = {}
-    for _, _, expiry, _, _ in parsed:
-        if expiry.month == 12:
-            year_ends[expiry.year] = max(year_ends.get(expiry.year, expiry), expiry)
-    year_ends = {d for y, d in year_ends.items() if y <= session.year + 1}
-
-    options = []
-    for o, root, expiry, cp, strike in parsed:
-        if keep_expiry(expiry, session, year_ends):
-            options.append({**o, "root": root, "expiry": expiry.isoformat(),
-                            "cp": cp, "strike": strike})
+    options = source.options(session)
 
     markets = []
     for series in KALSHI_SERIES:
@@ -180,15 +291,15 @@ def main():
     rows.append({"date_et": session.isoformat(), "kind": kind, "stamp_utc": stamp,
                  "fetch_start_utc": now_utc.isoformat(timespec="seconds"),
                  "kalshi_done_utc": kalshi_done_utc.isoformat(timespec="seconds"),
-                 "cboe_payload_timestamp": chain.get("timestamp"),
-                 "spx_last_tick_et": last_tick, "spx_price": data.get("current_price"),
+                 "cboe_payload_timestamp": payload_ts,
+                 "spx_last_tick_et": last_tick, "spx_price": spx_price,
                  "option_rows": len(options), "kalshi_rows": len(markets),
-                 "forced": int(args.force)})
+                 "forced": int(args.force), "source": source.name})
     with manifest.open("w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=MANIFEST_FIELDS)
         w.writeheader()
         w.writerows(rows)
-    print(f"{session} {kind} {stamp}: {len(options)} option rows, {len(markets)} Kalshi rows")
+    print(f"{session} {kind} {stamp} via {source.name}: {len(options)} option rows, {len(markets)} Kalshi rows")
     if not options or not markets:
         print("warning: one side came back empty", file=sys.stderr)
         return 1

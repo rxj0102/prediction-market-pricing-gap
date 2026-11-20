@@ -10,7 +10,7 @@ Collection, backfill, a first alignment of the rates data, a first calibration t
 
 `collector.py` takes one snapshot per run and writes it under `data/YYYY-MM-DD/`, named by the trading session it belongs to:
 
-- `*_spx_options.csv.gz`: SPX option quotes from the free Cboe delayed feed (about 15 minutes delayed), limited to expiries in the next 7 days plus the December year end expiries.
+- `*_spx_options.csv.gz`: SPX and SPXW option quotes, limited to expiries in the next 7 days plus the December year end expiries. They come from the Tradier market data API when a token is set, and otherwise from the Cboe delayed feed. The manifest records which.
 - `*_kalshi.csv.gz`: every open Kalshi market in the S&P 500 above/below ladder (KXINXU) and the yearly range (KXINXY), with bid, ask, volume and open interest.
 - `data/manifest.csv`: one row per snapshot with fetch times, the SPX level and the kind of snapshot.
 
@@ -104,6 +104,14 @@ Output from the run on 2026-11-19, for strikes with an option probability from 0
 | 2026-11-18 | 60 | 0.049 | -0.0025 | 0.0121 | 1.00 |
 
 The gap is the Kalshi midpoint minus the option probability. At 16:15 the next day ladder sits within about 2 cents of the option implied probability on every near the money strike, inside a quote about 5 cents wide. That pattern is what quotes set off the option market would look like, but three sessions cannot show that, and the option probabilities carry their own fitting error. The full table is in `data/derived/matched_close.csv`.
+
+## Option data source
+
+The Cboe delayed feed answered every request with 403 from the evening of 2026-11-19, from GitHub's machines and from elsewhere. The last snapshot it served was the intraday one at 17:18 UTC that day, so the 2026-11-19 closing chain is missing.
+
+The collector now uses Tradier when a token is available, through the `TRADIER_TOKEN` environment variable or the file `~/.config/pmgap/tradier_token`. A free Tradier developer account gives a sandbox token with delayed market data. On GitHub the token goes in a repository secret named `TRADIER_TOKEN`. Without a token the collector falls back to Cboe and stops with a clear message if Cboe still refuses.
+
+Option rows from both sources have the same columns. Tradier's `iv` column is its midpoint implied volatility, and its size columns may not mean exactly what Cboe's did. `match_close.py` uses only bid, ask, strike, expiry and root, so the matching does not depend on either.
 
 ## Schedule
 
