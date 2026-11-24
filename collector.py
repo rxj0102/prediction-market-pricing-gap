@@ -1,9 +1,13 @@
 """Snapshot the Kalshi S&P 500 ladders and the matching SPX option chain.
 
 Each run writes two gzip CSV files under data/YYYY-MM-DD/ (the session date)
-and adds one row to data/manifest.csv. Both sources are free and need no API key:
+and adds one row to data/manifest.csv. All sources are free and need no API key:
   Kalshi public REST API (markets for the series in KALSHI_SERIES)
   Cboe delayed quotes (full SPX chain, about 15 minutes delayed)
+  Yahoo Finance option chains, used only when Cboe refuses the request.
+  Since 2026-11-19 Cboe answers requests from GitHub runners with 403
+  Forbidden. The manifest's source column records which feed each chain
+  came from, and Yahoo rows have no sizes or delta.
 
 The option chain cannot be backfilled for free, so it is the reason this job
 exists. Kalshi prices can be re-pulled later at one minute resolution from the
@@ -32,6 +36,11 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import requests
+
+try:
+    import yfinance as yf
+except ImportError:  # only needed for the fallback
+    yf = None
 
 KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
 CBOE = "https://cdn.cboe.com/api/global/delayed_quotes/options/_SPX.json"
@@ -100,8 +109,12 @@ def write_gz(path, fields, rows):
 
 MANIFEST_FIELDS = ["date_et", "kind", "stamp_utc", "fetch_start_utc", "kalshi_done_utc",
                    "cboe_payload_timestamp", "spx_last_tick_et", "spx_price",
-                   "option_rows", "kalshi_rows", "forced"]
+                   "option_rows", "kalshi_rows", "forced", "source"]
 STALE = dt.timedelta(minutes=30)   # index tick older than this means the session is over
+# Cboe's global trading hours session for SPX options opens at 20:15 Eastern.
+# Yahoo shows those live overnight quotes, so a Yahoo chain taken after this
+# time is no longer the closing chain.
+GTH_OPEN = dt.time(20, 15)
 
 
 def classify(now_utc, last_tick):
@@ -125,10 +138,64 @@ def read_manifest(path):
     with path.open(newline="") as f:
         rows = list(csv.DictReader(f))
     for r in rows:
+        r["source"] = r.get("source") or "cboe"
         if not r.get("kind"):
             fetched = dt.datetime.fromisoformat(r["fetch_start_utc"])
             r["kind"] = classify(fetched, r["spx_last_tick_et"])[1]
     return rows
+
+
+def cboe_chain():
+    """Full SPX chain from Cboe, as (option dicts, last index tick ET, price, payload stamp)."""
+    chain = get_json(CBOE)
+    data = chain["data"]
+    # last_trade_time is the latest index tick in Eastern time.
+    return data["options"], str(data.get("last_trade_time") or ""), data.get("current_price"), chain.get("timestamp")
+
+
+def yahoo_chain(today):
+    """SPX chain from Yahoo Finance in the Cboe field layout, near expiries and December ones only."""
+    if yf is None:
+        raise RuntimeError("Cboe refused the request and yfinance is not installed")
+    t = yf.Ticker("^SPX")
+    hist = t.history(period="5d", interval="1m")
+    last = hist.index[-1].tz_convert(ET)
+    last_tick = last.strftime("%Y-%m-%dT%H:%M:%S")
+    price = float(hist["Close"].iloc[-1])
+    expiries = ()
+    for attempt in range(4):
+        expiries = t.options
+        if expiries:
+            break
+        time.sleep(10 * (attempt + 1))
+    rows = []
+    for e in expiries:
+        expiry = dt.date.fromisoformat(e)
+        near = today <= expiry <= today + dt.timedelta(days=NEAR_DAYS)
+        if not near and expiry.month != 12:
+            continue
+        ch = t.option_chain(e)
+        for frame in (ch.calls, ch.puts):
+            for r in frame.itertuples():
+                rows.append({
+                    "option": r.contractSymbol, "bid": r.bid, "ask": r.ask,
+                    "bid_size": "", "ask_size": "", "iv": r.impliedVolatility, "delta": "",
+                    "volume": r.volume, "open_interest": r.openInterest,
+                    "last_trade_price": r.lastPrice, "last_trade_time": r.lastTradeDate,
+                })
+        time.sleep(0.5)
+    return rows, last_tick, price, ""
+
+
+def fetch_chain(today):
+    """Cboe first; Yahoo only if Cboe refuses with 403."""
+    try:
+        return (*cboe_chain(), "cboe")
+    except requests.HTTPError as e:
+        if e.response is None or e.response.status_code != 403:
+            raise
+        print("Cboe returned 403; using Yahoo Finance", file=sys.stderr)
+        return (*yahoo_chain(today), "yahoo")
 
 
 def main():
@@ -139,11 +206,14 @@ def main():
     args = ap.parse_args()
 
     now_utc = dt.datetime.now(dt.timezone.utc)
-    chain = get_json(CBOE)
-    data = chain["data"]
-    # last_trade_time is the latest index tick in Eastern time.
-    last_tick = str(data.get("last_trade_time") or "")
+    raw_options, last_tick, spx_price, payload_ts, source = fetch_chain(now_utc.astimezone(ET).date())
     session, kind = classify(now_utc, last_tick)
+    now_et = now_utc.astimezone(ET)
+    if source == "yahoo" and kind == "close" and not (
+            now_et.date() == session and now_et.time() < GTH_OPEN):
+        # Overnight Yahoo quotes have moved since the close; keep them, but
+        # never as the closing chain that the matching uses.
+        kind = "overnight"
 
     manifest = Path(args.out) / "manifest.csv"
     rows = read_manifest(manifest)
@@ -153,7 +223,7 @@ def main():
         return 0
 
     # Last listed expiry of each calendar year, for the yearly range contract.
-    parsed = [(o, *parse_occ(o["option"])) for o in data["options"]]
+    parsed = [(o, *parse_occ(o["option"])) for o in raw_options]
     year_ends = {}
     for _, _, expiry, _, _ in parsed:
         if expiry.month == 12:
@@ -165,6 +235,10 @@ def main():
         if keep_expiry(expiry, session, year_ends):
             options.append({**o, "root": root, "expiry": expiry.isoformat(),
                             "cp": cp, "strike": strike})
+
+    if not options:
+        print(f"no option rows from {source}; nothing saved", file=sys.stderr)
+        return 1
 
     markets = []
     for series in KALSHI_SERIES:
@@ -180,15 +254,15 @@ def main():
     rows.append({"date_et": session.isoformat(), "kind": kind, "stamp_utc": stamp,
                  "fetch_start_utc": now_utc.isoformat(timespec="seconds"),
                  "kalshi_done_utc": kalshi_done_utc.isoformat(timespec="seconds"),
-                 "cboe_payload_timestamp": chain.get("timestamp"),
-                 "spx_last_tick_et": last_tick, "spx_price": data.get("current_price"),
+                 "cboe_payload_timestamp": payload_ts,
+                 "spx_last_tick_et": last_tick, "spx_price": spx_price,
                  "option_rows": len(options), "kalshi_rows": len(markets),
-                 "forced": int(args.force)})
+                 "forced": int(args.force), "source": source})
     with manifest.open("w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=MANIFEST_FIELDS)
         w.writeheader()
         w.writerows(rows)
-    print(f"{session} {kind} {stamp}: {len(options)} option rows, {len(markets)} Kalshi rows")
+    print(f"{session} {kind} {stamp} ({source}): {len(options)} option rows, {len(markets)} Kalshi rows")
     if not options or not markets:
         print("warning: one side came back empty", file=sys.stderr)
         return 1

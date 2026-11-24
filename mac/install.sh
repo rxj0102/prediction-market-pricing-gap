@@ -16,7 +16,7 @@ if [ "$1" = "uninstall" ]; then
   exit 0
 fi
 
-"$PYTHON" -c "import requests" 2>/dev/null || "$PYTHON" -m pip install --user requests
+"$PYTHON" -c "import requests, yfinance" 2>/dev/null || "$PYTHON" -m pip install --user requests yfinance
 mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
 cat > "$PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
