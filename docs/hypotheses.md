@@ -1,6 +1,6 @@
 # Pre-registration: Kalshi next day ladder against SPXW option probabilities
 
-Status: DRAFT. Edit the choices below, then commit the final version before running any test on more than the three sessions already reported in the README. Once committed, change it only by dated amendments added at the end, without editing what came before.
+Status: frozen on 2026-11-24, before any test was run and with three matched sessions reported in the README. Change it only by dated amendments added at the end, without editing what came before.
 
 ## Why write this now
 
