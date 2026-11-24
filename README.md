@@ -12,11 +12,11 @@ The tests were written down before the sample was large enough to run them. [doc
 
 `collector.py` takes one snapshot per run and writes it under `data/YYYY-MM-DD/`, named by the trading session it belongs to:
 
-- `*_spx_options.csv.gz`: SPX option quotes from the free Cboe delayed feed (about 15 minutes delayed), limited to expiries in the next 7 days plus the December year end expiries.
+- `*_spx_options.csv.gz`: SPX option quotes from the free Cboe delayed feed (about 15 minutes delayed), limited to expiries in the next 7 days plus the December year end expiries. When Cboe refuses the request, as it has for GitHub runners since 2026-11-19, the same chain comes from Yahoo Finance, without sizes or delta.
 - `*_kalshi.csv.gz`: every open Kalshi market in the S&P 500 above/below ladder (KXINXU) and the yearly range (KXINXY), with bid, ask, volume and open interest.
-- `data/manifest.csv`: one row per snapshot with fetch times, the SPX level and the kind of snapshot.
+- `data/manifest.csv`: one row per snapshot with fetch times, the SPX level, the kind of snapshot and the source of the option chain.
 
-There are two kinds. An intraday snapshot is taken while the index is still ticking. A closing snapshot is taken after the session ends, when the option chain holds its closing quotes until the next open, so a run any time overnight captures the same closing chain. Only one closing snapshot is kept per session.
+There are two kinds. An intraday snapshot is taken while the index is still ticking. A closing snapshot is taken after the session ends, when the option chain holds its closing quotes until the next open, so a run any time overnight captures the same closing chain. Only one closing snapshot is kept per session. Yahoo shows the live quotes of Cboe's overnight session, which opens at 20:15 Eastern, so a Yahoo chain taken after that is labelled overnight and is not used as the closing chain.
 
 The closing chain lines up with the next session's 16:00 above/below ladder. In the backfill, 97.3 percent of those ladders were already open by 16:15 Eastern on the previous trading day, when the option chain stops updating.
 
@@ -153,10 +153,14 @@ All are free and need no API key.
 
 - Kalshi public REST API: https://docs.kalshi.com
 - Cboe delayed quotes: https://www.cboe.com/delayed_quotes/spx/quote_table
+- Yahoo Finance option chains through the yfinance package, as a fallback
 - Atlanta Fed Market Probability Tracker: https://www.atlantafed.org/research-and-data/data/market-probability-tracker
 - New York Fed SOFR: https://www.newyorkfed.org/markets/reference-rates/sofr
 
 ## Known limits
+
+- No closing chain was saved for the sessions of 2026-11-19, 2026-11-20 and 2026-11-23, after Cboe started refusing GitHub runners and before the Yahoo fallback existed. Amendment 1 of [docs/hypotheses.md](docs/hypotheses.md) records the change of source.
+- Yahoo chains have no bid or ask sizes and no delta, and their closing chain must be caught between the close and 20:15 Eastern.
 
 - Option quotes are delayed and Kalshi quotes are live, so the two files in a snapshot are not from the same instant. Align them in analysis using Kalshi candlesticks at the option timestamp.
 - Scheduled GitHub Actions runs can start late or not at all, so intraday coverage depends on the Mac collector being awake.

@@ -36,4 +36,10 @@ Test: Brier score of each against the settled result, the paired difference aver
 
 ## Amendments
 
-None yet.
+**Amendment 1, 2026-11-24. Option quote source.** From the evening of 2026-11-19, Cboe's delayed quote feed answers requests from GitHub runners with 403 Forbidden, so no closing chain was saved for the sessions of 2026-11-19, 2026-11-20 and 2026-11-23. The collector now falls back to Yahoo Finance when Cboe refuses, and records the source of every chain in the manifest. Yahoo shows the live quotes of Cboe's overnight session, which opens at 20:15 Eastern, so a Yahoo chain counts as a closing chain only if it was taken after the close and before 20:15 on the session day. Later Yahoo chains are kept and labelled overnight, and are not matched.
+
+Consequences for the plan, fixed before any test:
+- Sessions from both sources count toward the 60 session threshold.
+- H1 and H2 are reported on all sessions, and again separately for each source.
+- If the two sources give significantly different mean gaps on H1, that is reported as a difference between the data sources and not as evidence about the markets.
+- Missed sessions are listed and not filled, as before.
