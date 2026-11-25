@@ -115,6 +115,12 @@ STALE = dt.timedelta(minutes=30)   # index tick older than this means the sessio
 # Yahoo shows those live overnight quotes, so a Yahoo chain taken after this
 # time is no longer the closing chain.
 GTH_OPEN = dt.time(20, 15)
+# Amendment 3: one midday snapshot per session, taken by the first run from 12:00
+# Eastern (before 14:00) while the index is ticking, with quotes. It pairs the
+# same day's 16:00 Kalshi ladder with SPXW options expiring that day, compared at
+# the time of the index quote in the chain response (about 15 minutes earlier).
+MIDDAY_FROM = dt.time(12, 0)
+MIDDAY_TO = dt.time(14, 0)
 # A closing chain needs two-sided quotes. Cboe closing chains have them on most
 # rows; Yahoo chains taken after the close have none.
 MIN_QUOTED_SHARE = 0.2
@@ -238,6 +244,11 @@ def main():
 
     manifest = Path(args.out) / "manifest.csv"
     rows = read_manifest(manifest)
+    if (kind == "intraday" and MIDDAY_FROM <= now_et.time() < MIDDAY_TO
+            and now_et.date() == session
+            and quoted_share(raw_options) >= MIN_QUOTED_SHARE
+            and not any(r["date_et"] == session.isoformat() and r["kind"] == "midday" for r in rows)):
+        kind = "midday"
     done = any(r["date_et"] == session.isoformat() and r["kind"] == "close" for r in rows)
     if kind == "close" and done and not args.force:
         print(f"closing chain for {session} already saved (last tick {last_tick}); skipping")

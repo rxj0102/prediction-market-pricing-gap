@@ -52,3 +52,12 @@ Consequences, fixed before any test:
 - Missed sessions so far: 2026-11-19, 2026-11-20, 2026-11-23 and 2026-11-24. They are listed and not filled.
 - Until a closing chain can again be collected every session, the 60 session threshold is not getting closer. Any change to how the option side is collected will be a further amendment, made before any test.
 
+**Amendment 3, 2026-11-25. Midday snapshots of the same day ladder replace closing chains.** Cboe refuses GitHub runners and Yahoo has no quotes after the close (Amendment 2), so closing chains can no longer be collected every session. A comparison just before the close with the next session's ladder is not possible either: Kalshi opens each next day ladder at 16:00 Eastern, when the session ends. From the first session after this amendment, the unit is a midday snapshot of the same day's ladder.
+
+- Snapshot: the first collector run on session D from 12:00 Eastern (and before 14:00) while the index is still ticking, with two-sided quotes on at least 20 percent of option rows.
+- Pair: the Kalshi KXINXU ladder that settles at 16:00 on session D against the SPXW options expiring on session D, which settle on the same close.
+- Match time: the time of the index quote returned with the chain. Yahoo's quotes run about 15 minutes behind: on 2026-11-24 the put call parity forward of the next day chain downloaded at 15:36 Eastern was 7181.5, against an index of 7179.1 at 15:21 (the time Yahoo returned with the chain) and 7173.5 at 15:36. Kalshi midpoints are read from Kalshi's price history at the match time, so both markets are compared at the same minute. Time to settlement runs from the match time.
+- Unchanged: the filters (NEAR, TIGHT, MIN_OTM_MID), the session averaging, H1, H2, the secondary table, the Holm correction, the results log and the rule that missed sessions are listed and not filled.
+- Sample: only midday sessions collected after this amendment count toward the 60 session threshold. The three closing sessions of 2026-11-16 to 2026-11-18 stay in the README as a descriptive table and are not pooled with the new unit. A dry run of the matching on the midday snapshots of 2026-11-18 and 2026-11-19, done only to check the code, is not part of the sample.
+- Reported alongside each test: the source of each chain (Amendment 1 still applies) and, for each session, the gap between the parity forward and the index at the match time, as a check on the timing.
+- The matching is `match_close.py --midday`, which writes `data/derived/matched_midday.csv`.

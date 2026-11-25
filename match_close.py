@@ -18,6 +18,10 @@ For every closing snapshot in data/manifest.csv (session D):
 3. Settlement. Where N has passed, record whether each Kalshi strike settled
    yes.
 
+With --midday it matches the midday snapshots of Amendment 3 instead: the same
+day's 16:00 ladder against SPXW options expiring that day, and writes
+data/derived/matched_midday.csv.
+
 Writes data/derived/matched_close.csv, one row per session and strike, and
 prints a summary per session for strikes near the money (option probability
 from 0.05 to 0.95) with a Kalshi spread of at most 10 cents: the mean and
@@ -47,6 +51,7 @@ KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
 SERIES = "KXINXU"
 ET = ZoneInfo("America/New_York")
 OUT = Path("data/derived/matched_close.csv")
+OUT_MIDDAY = Path("data/derived/matched_midday.csv")
 MATCH_TIME = dt.time(16, 15)
 MIN_OTM_MID = 0.10     # drop option quotes cheaper than this
 TIGHT = 0.10           # Kalshi spread at or below this counts as tight
@@ -185,33 +190,48 @@ def ladder_results(event):
 
 # ------------------------------------------------------------------ main
 
-def next_ladder(kalshi, session):
+def next_ladder(kalshi, session, same_day=False):
     k = kalshi[kalshi["event_ticker"].str.startswith(SERIES + "-")
                & kalshi["event_ticker"].str.endswith("H1600")].copy()
     k["close"] = pd.to_datetime(k["close_time"], utc=True).dt.tz_convert(ET)
-    k = k[k["close"].dt.date > session]
+    k = k[k["close"].dt.date == session] if same_day else k[k["close"].dt.date > session]
     if k.empty:
         return None
     first = k["close"].min()
     return k[k["close"] == first]
 
 
+def match_time(r, session):
+    """When both markets are compared.
+
+    close: 16:15 Eastern, when the closing option quotes are fixed (the design
+    frozen on 2026-11-24). midday (Amendment 3): the time of the index quote
+    returned with the chain. Yahoo and Cboe's delayed feed both run about 15
+    minutes behind, and the option quotes in the same response are as old as
+    the index quote, so Kalshi is read at that minute, not at the download time.
+    """
+    if r.kind == "midday":
+        return dt.datetime.fromisoformat(r.spx_last_tick_et).replace(tzinfo=ET)
+    return dt.datetime.combine(session, MATCH_TIME, ET)
+
+
 def main():
+    kind = "midday" if "--midday" in sys.argv else "close"
     manifest = pd.read_csv("data/manifest.csv")
-    closes = manifest[manifest["kind"] == "close"]
+    closes = manifest[manifest["kind"] == kind]
     out, summary = [], []
     for r in closes.itertuples():
         session = dt.date.fromisoformat(r.date_et)
         folder = Path("data") / r.date_et
         chain = pd.read_csv(folder / f"{r.stamp_utc}_spx_options.csv.gz")
         kalshi = pd.read_csv(folder / f"{r.stamp_utc}_kalshi.csv.gz")
-        ladder = next_ladder(kalshi, session)
+        ladder = next_ladder(kalshi, session, same_day=(kind == "midday"))
         if ladder is None:
             print(f"{session}: no next session ladder in the snapshot")
             continue
         event = ladder["event_ticker"].iloc[0]
         settle_at = ladder["close"].iloc[0]
-        match_at = dt.datetime.combine(session, MATCH_TIME, ET)
+        match_at = match_time(r, session)
         t = (settle_at - match_at).total_seconds() / (365.25 * 86400)
         ladder = ladder[ladder["strike_type"] == "greater_or_equal"]
         strikes = sorted(ladder["floor_strike"].unique())
@@ -254,8 +274,9 @@ def main():
         })
         print(f"{session}: {event}, {len(d)} strikes", flush=True)
 
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame(out).to_csv(OUT, index=False)
+    out_path = OUT_MIDDAY if kind == "midday" else OUT
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(out).to_csv(out_path, index=False)
     pd.set_option("display.width", 200)
     print(pd.DataFrame(summary).to_string(index=False))
     return 0

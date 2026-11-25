@@ -6,7 +6,7 @@ Data collection for a study of the gap between Kalshi prediction market prices a
 
 Collection, backfill, a first alignment of the rates data, a first calibration table for the S&P 500 ladder, and matching of closing option chains with the next day ladder. The calibration table is a descriptive baseline from one pass over the data, and the matching covers three sessions. Neither is a tested finding.
 
-The tests were written down before the sample was large enough to run them. [docs/hypotheses.md](docs/hypotheses.md), frozen on 2026-11-24, fixes the unit, filters, sample size, hypotheses and multiple testing rule. No test runs before 60 settled sessions, and every specification that is run goes into `results/results_log.csv`.
+From 2026-11-25 the study compares the same day's 16:00 ladder with SPXW options expiring that day, in a snapshot taken each session from 12:00 Eastern and matched at the time of the option quotes, because closing chains can no longer be collected and the next day ladder only opens at the close (Amendments 2 and 3 of the pre-registration). The tests were written down before the sample was large enough to run them. [docs/hypotheses.md](docs/hypotheses.md), frozen on 2026-11-24, fixes the unit, filters, sample size, hypotheses and multiple testing rule. No test runs before 60 settled sessions, and every specification that is run goes into `results/results_log.csv`.
 
 ## What the collector does
 
