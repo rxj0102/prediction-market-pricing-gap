@@ -96,6 +96,10 @@ def implied_vol(price, f, k, t):
         return np.nan
 
 
+class NoQuotes(Exception):
+    """The closing chain has too few two-sided quotes to fit a smile."""
+
+
 def option_probabilities(chain, expiry, t, strikes):
     """P(index at expiry >= K) for each K in strikes, with fit diagnostics."""
     x = chain[(chain["root"] == "SPXW") & (chain["expiry"] == expiry)].copy()
@@ -124,6 +128,8 @@ def option_probabilities(chain, expiry, t, strikes):
         vega = f * norm.pdf((np.log(f / k) + s * s / 2) / s) * np.sqrt(t)
         sd = max(spread / 2, 0.025) / max(vega, 1e-6)   # vol error implied by the spread
         smile.append((np.log(k / f), iv, sd, k))
+    if len(smile) < 5:
+        raise NoQuotes(f"{len(smile)} usable out of the money quotes for {expiry}")
     smile = np.array(smile)
     lk, iv, sd = smile[:, 0], smile[:, 1], smile[:, 2]
     spline = UnivariateSpline(lk, iv, w=1 / sd, k=3, s=len(lk))
@@ -209,7 +215,12 @@ def main():
         t = (settle_at - match_at).total_seconds() / (365.25 * 86400)
         ladder = ladder[ladder["strike_type"] == "greater_or_equal"]
         strikes = sorted(ladder["floor_strike"].unique())
-        probs, fit = option_probabilities(chain, settle_at.date().isoformat(), t, strikes)
+        try:
+            probs, fit = option_probabilities(chain, settle_at.date().isoformat(), t, strikes)
+        except NoQuotes as e:
+            print(f"{session}: skipped, the closing chain has no usable quotes ({e}); "
+                  f"source {getattr(r, 'source', '')}")
+            continue
         results = ladder_results(event)
         for m in ladder.sort_values("floor_strike").itertuples():
             quote = kalshi_quote(m.ticker, match_at) or {}

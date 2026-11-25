@@ -160,6 +160,7 @@ All are free and need no API key.
 ## Known limits
 
 - No closing chain was saved for the sessions of 2026-11-19, 2026-11-20 and 2026-11-23, after Cboe started refusing GitHub runners and before the Yahoo fallback existed. Amendment 1 of [docs/hypotheses.md](docs/hypotheses.md) records the change of source.
+- The Yahoo fallback cannot supply closing chains: between the close and 20:15 Eastern Yahoo reports a bid and ask of zero for every option. The chain saved after the close of 2026-11-24 is therefore labelled `no_quotes` and not matched, and the collector now never records such a chain as a session's close (Amendment 2). Until the option side can be collected again, no new session enters the sample.
 - Yahoo chains have no bid or ask sizes and no delta, and their closing chain must be caught between the close and 20:15 Eastern.
 
 - Option quotes are delayed and Kalshi quotes are live, so the two files in a snapshot are not from the same instant. Align them in analysis using Kalshi candlesticks at the option timestamp.

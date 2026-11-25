@@ -43,3 +43,12 @@ Consequences for the plan, fixed before any test:
 - H1 and H2 are reported on all sessions, and again separately for each source.
 - If the two sources give significantly different mean gaps on H1, that is reported as a difference between the data sources and not as evidence about the markets.
 - Missed sessions are listed and not filled, as before.
+
+**Amendment 2, 2026-11-25. Yahoo chains taken after the close have no quotes.** Amendment 1 assumed that a Yahoo chain taken after the close and before 20:15 Eastern holds the closing quotes. It does not. In that window Yahoo reports a bid and an ask of zero for every option: in the chain saved after the close of 2026-11-24, none of the 520 rows expiring on the next session has a quote, while the Yahoo chain taken at 15:36 Eastern the same day has a positive bid on 82 percent of them. A Yahoo chain cannot be a closing chain.
+
+Consequences, fixed before any test:
+- The collector labels a chain with two-sided quotes on fewer than 20 percent of its rows `no_quotes`. It is kept, never matched, and does not count as the session's closing chain, so a later run that reaches Cboe can still save one.
+- The chain saved after the close of 2026-11-24 is relabelled `no_quotes` in the manifest.
+- Missed sessions so far: 2026-11-19, 2026-11-20, 2026-11-23 and 2026-11-24. They are listed and not filled.
+- Until a closing chain can again be collected every session, the 60 session threshold is not getting closer. Any change to how the option side is collected will be a further amendment, made before any test.
+
