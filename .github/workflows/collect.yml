@@ -5,6 +5,11 @@ on:
     # Intraday snapshots, hourly on weekdays from 14:35 to 21:35 UTC. This
     # covers the US cash session in both winter and summer time.
     - cron: "35 14-21 * * 1-5"
+    # Midday snapshots (Amendment 3 of docs/hypotheses.md): extra tries from
+    # 12:05 to 12:50 Eastern in both winter (17 UTC) and summer (16 UTC) time,
+    # because scheduled jobs often start late or are skipped. The script keeps
+    # the first run from 12:00 Eastern as the session's midday snapshot.
+    - cron: "5,20,50 16,17 * * 1-5"
     # Closing snapshots. GitHub often runs scheduled jobs hours late or skips
     # them, so these try every hour from the evening until before the next
     # open. The script saves the closing chain once per session and exits

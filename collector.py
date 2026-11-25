@@ -115,6 +115,27 @@ STALE = dt.timedelta(minutes=30)   # index tick older than this means the sessio
 # Yahoo shows those live overnight quotes, so a Yahoo chain taken after this
 # time is no longer the closing chain.
 GTH_OPEN = dt.time(20, 15)
+# Amendment 3: one midday snapshot per session, taken by the first run from 12:00
+# Eastern (before 14:00) while the index is ticking, with quotes. It pairs the
+# same day's 16:00 Kalshi ladder with SPXW options expiring that day, compared at
+# the time of the index quote in the chain response (about 15 minutes earlier).
+MIDDAY_FROM = dt.time(12, 0)
+MIDDAY_TO = dt.time(14, 0)
+# A closing chain needs two-sided quotes. Cboe closing chains have them on most
+# rows; Yahoo chains taken after the close have none.
+MIN_QUOTED_SHARE = 0.2
+
+
+def quoted_share(options):
+    """Share of option rows with a positive bid and a positive ask."""
+    def pos(v):
+        try:
+            return float(v) > 0
+        except (TypeError, ValueError):
+            return False
+    if not options:
+        return 0.0
+    return sum(pos(o.get("bid")) and pos(o.get("ask")) for o in options) / len(options)
 
 
 def classify(now_utc, last_tick):
@@ -214,9 +235,20 @@ def main():
         # Overnight Yahoo quotes have moved since the close; keep them, but
         # never as the closing chain that the matching uses.
         kind = "overnight"
+    if kind == "close" and quoted_share(raw_options) < MIN_QUOTED_SHARE:
+        # Between the close and 20:15 Eastern Yahoo reports a bid and ask of zero
+        # for every option, so such a chain has no closing quotes. Keep it, but
+        # never as the closing chain: it must not stop a later run (the Mac, or
+        # a Cboe answer) from saving a usable one.
+        kind = "no_quotes"
 
     manifest = Path(args.out) / "manifest.csv"
     rows = read_manifest(manifest)
+    if (kind == "intraday" and MIDDAY_FROM <= now_et.time() < MIDDAY_TO
+            and now_et.date() == session
+            and quoted_share(raw_options) >= MIN_QUOTED_SHARE
+            and not any(r["date_et"] == session.isoformat() and r["kind"] == "midday" for r in rows)):
+        kind = "midday"
     done = any(r["date_et"] == session.isoformat() and r["kind"] == "close" for r in rows)
     if kind == "close" and done and not args.force:
         print(f"closing chain for {session} already saved (last tick {last_tick}); skipping")

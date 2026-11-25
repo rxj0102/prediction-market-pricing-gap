@@ -43,3 +43,21 @@ Consequences for the plan, fixed before any test:
 - H1 and H2 are reported on all sessions, and again separately for each source.
 - If the two sources give significantly different mean gaps on H1, that is reported as a difference between the data sources and not as evidence about the markets.
 - Missed sessions are listed and not filled, as before.
+
+**Amendment 2, 2026-11-25. Yahoo chains taken after the close have no quotes.** Amendment 1 assumed that a Yahoo chain taken after the close and before 20:15 Eastern holds the closing quotes. It does not. In that window Yahoo reports a bid and an ask of zero for every option: in the chain saved after the close of 2026-11-24, none of the 520 rows expiring on the next session has a quote, while the Yahoo chain taken at 15:36 Eastern the same day has a positive bid on 82 percent of them. A Yahoo chain cannot be a closing chain.
+
+Consequences, fixed before any test:
+- The collector labels a chain with two-sided quotes on fewer than 20 percent of its rows `no_quotes`. It is kept, never matched, and does not count as the session's closing chain, so a later run that reaches Cboe can still save one.
+- The chain saved after the close of 2026-11-24 is relabelled `no_quotes` in the manifest.
+- Missed sessions so far: 2026-11-19, 2026-11-20, 2026-11-23 and 2026-11-24. They are listed and not filled.
+- Until a closing chain can again be collected every session, the 60 session threshold is not getting closer. Any change to how the option side is collected will be a further amendment, made before any test.
+
+**Amendment 3, 2026-11-25. Midday snapshots of the same day ladder replace closing chains.** Cboe refuses GitHub runners and Yahoo has no quotes after the close (Amendment 2), so closing chains can no longer be collected every session. A comparison just before the close with the next session's ladder is not possible either: Kalshi opens each next day ladder at 16:00 Eastern, when the session ends. From the first session after this amendment, the unit is a midday snapshot of the same day's ladder.
+
+- Snapshot: the first collector run on session D from 12:00 Eastern (and before 14:00) while the index is still ticking, with two-sided quotes on at least 20 percent of option rows.
+- Pair: the Kalshi KXINXU ladder that settles at 16:00 on session D against the SPXW options expiring on session D, which settle on the same close.
+- Match time: the time of the index quote returned with the chain. Yahoo's quotes run about 15 minutes behind: on 2026-11-24 the put call parity forward of the next day chain downloaded at 15:36 Eastern was 7181.5, against an index of 7179.1 at 15:21 (the time Yahoo returned with the chain) and 7173.5 at 15:36. Kalshi midpoints are read from Kalshi's price history at the match time, so both markets are compared at the same minute. Time to settlement runs from the match time.
+- Unchanged: the filters (NEAR, TIGHT, MIN_OTM_MID), the session averaging, H1, H2, the secondary table, the Holm correction, the results log and the rule that missed sessions are listed and not filled.
+- Sample: only midday sessions collected after this amendment count toward the 60 session threshold. The three closing sessions of 2026-11-16 to 2026-11-18 stay in the README as a descriptive table and are not pooled with the new unit. A dry run of the matching on the midday snapshots of 2026-11-18 and 2026-11-19, done only to check the code, is not part of the sample.
+- Reported alongside each test: the source of each chain (Amendment 1 still applies) and, for each session, the gap between the parity forward and the index at the match time, as a check on the timing.
+- The matching is `match_close.py --midday`, which writes `data/derived/matched_midday.csv`.
