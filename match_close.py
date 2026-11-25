@@ -209,6 +209,11 @@ def main():
         t = (settle_at - match_at).total_seconds() / (365.25 * 86400)
         ladder = ladder[ladder["strike_type"] == "greater_or_equal"]
         strikes = sorted(ladder["floor_strike"].unique())
+        quoted = chain[(chain["root"] == "SPXW") & (chain["expiry"] == settle_at.date().isoformat())
+                       & (chain["bid"] > 0) & (chain["ask"] > 0)]
+        if quoted.empty:
+            print(f"{session}: no two-sided quotes for the next expiry; session skipped", file=sys.stderr)
+            continue
         probs, fit = option_probabilities(chain, settle_at.date().isoformat(), t, strikes)
         results = ladder_results(event)
         for m in ladder.sort_values("floor_strike").itertuples():

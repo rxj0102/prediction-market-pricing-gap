@@ -214,6 +214,12 @@ def main():
         # Overnight Yahoo quotes have moved since the close; keep them, but
         # never as the closing chain that the matching uses.
         kind = "overnight"
+    if source == "yahoo" and kind == "close" and not any(
+            float(o.get("bid") or 0) > 0 and float(o.get("ask") or 0) > 0 for o in options):
+        # Yahoo blanks bid and ask between the 16:15 options close and the
+        # 20:15 overnight open. A chain with no two-sided quote cannot be
+        # matched, so it is kept but never counted as the closing chain.
+        kind = "close_noquotes"
 
     manifest = Path(args.out) / "manifest.csv"
     rows = read_manifest(manifest)
