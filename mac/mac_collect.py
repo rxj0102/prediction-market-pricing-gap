@@ -7,7 +7,7 @@ due, so most starts exit within a second:
             taken at the first start from minute 20 of the hour. The Cboe
             feed runs about 15 minutes behind, so the quotes are from about
             minute 5 of the hour or later.
-  close     from 16:50 Eastern on a weekday, if the closing chain for that
+  close     from 16:30 Eastern on a weekday, if the closing chain for that
             session is not saved yet. This backs up the GitHub workflow.
 
 The decision uses US Eastern time, so it keeps working when the Mac's own
@@ -30,7 +30,7 @@ from zoneinfo import ZoneInfo
 ET = ZoneInfo("America/New_York")
 REPO = Path(__file__).resolve().parent.parent
 FIRST, LAST, MINUTE = 10, 15, 20     # intraday slots at HH:20 Eastern
-CLOSE_AFTER = dt.time(16, 50)   # the last tick (16:15) is stale by 16:45
+CLOSE_AFTER = dt.time(16, 30)   # index stale by then; Yahoo keeps closing quotes past 16:45 but blanks them later
 
 
 def manifest_rows():

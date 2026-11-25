@@ -117,7 +117,7 @@ GitHub runs scheduled jobs late or skips them. Of the first eleven scheduled slo
 
 GitHub has run none of the intraday slots so far, so the `mac/` folder adds a second collector that runs on a Mac during US hours.
 
-- `mac/mac_collect.py` starts every 10 minutes through launchd and usually exits at once. It takes one intraday snapshot per US trading hour from 10:00 to 15:59 Eastern, at the first start from minute 20 of the hour, and the closing snapshot from 16:50 Eastern if GitHub has not saved it yet.
+- `mac/mac_collect.py` starts every 10 minutes through launchd and usually exits at once. It takes one intraday snapshot per US trading hour from 10:00 to 15:59 Eastern, at the first start from minute 20 of the hour, and the closing snapshot from 16:30 Eastern if GitHub has not saved it yet, retrying every 10 minutes until a chain with two-sided quotes is saved.
 - It pulls before deciding, so it sees snapshots GitHub has already pushed, and it rebases before pushing, so the two collectors do not collide.
 - The decision uses US Eastern time, so it keeps working when the Mac changes time zone. A Mac that is asleep or offline misses its slots.
 - At six intraday snapshots and one closing snapshot a day, the data grows by roughly 1.2 MB per trading day.

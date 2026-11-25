@@ -43,3 +43,6 @@ Consequences for the plan, fixed before any test:
 - H1 and H2 are reported on all sessions, and again separately for each source.
 - If the two sources give significantly different mean gaps on H1, that is reported as a difference between the data sources and not as evidence about the markets.
 - Missed sessions are listed and not filled, as before.
+
+**Amendment 2, 2026-11-25. Yahoo closing chains must carry quotes.** The Yahoo chain saved at 18:36 Eastern on 2026-11-24 had every bid and ask at zero, so that session has no usable closing chain. A live test on 2026-11-25 found Yahoo still showing two-sided quotes at 16:45 Eastern, with last trades at 16:15:00, so the closing state survives the close for a while before Yahoo blanks it. A Yahoo chain now counts as the closing chain only if it has two-sided quotes for the next expiry; otherwise it is saved as close_noquotes and not matched, and the collectors keep trying. The Mac collector's closing slot moves from 16:50 to 16:30 Eastern. The match time stays 16:15, and nothing else in the plan changes.
+
