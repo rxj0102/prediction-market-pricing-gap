@@ -61,3 +61,13 @@ Consequences, fixed before any test:
 - Sample: only midday sessions collected after this amendment count toward the 60 session threshold. The three closing sessions of 2026-11-16 to 2026-11-18 stay in the README as a descriptive table and are not pooled with the new unit. A dry run of the matching on the midday snapshots of 2026-11-18 and 2026-11-19, done only to check the code, is not part of the sample.
 - Reported alongside each test: the source of each chain (Amendment 1 still applies) and, for each session, the gap between the parity forward and the index at the match time, as a check on the timing.
 - The matching is `match_close.py --midday`, which writes `data/derived/matched_midday.csv`.
+
+**Amendment 4, 2026-11-26. Correction to Amendment 2.** Amendment 2 says Yahoo reports a bid and ask of zero for every option between the close and 20:15 Eastern. That is too strong. A live test on 2026-11-25, downloading the chain from outside GitHub, found two-sided quotes on most SPXW contracts expiring on the next session (2026-11-27) after the close:
+
+| Download (Eastern) | Contracts with bid and ask | Latest last trade (Eastern) |
+| --- | --- | --- |
+| 16:16 | 574 of 687 | 16:01 |
+| 16:26 | 554 of 687 | 16:11 |
+| 16:45 | 555 of 687 | 16:15 |
+
+The chain the collector saved at 18:13 Eastern the same day had no quotes, and so did the one saved at 18:36 on 2026-11-24. So Yahoo keeps the closing quotes for at least 30 minutes after the 16:15 options close and blanks them some time before 18:13. Nothing in the plan changes: Amendment 3 stands, because a window that short cannot be met every session with the collectors' timing. The test chains were not saved to the repository and are not part of any sample; Kalshi listed no next day ladder that day because of the Thanksgiving holiday.
